@@ -69,3 +69,66 @@ Also ensure that the time is accurately set on your server. Activities are signe
 ### Other instances don't receive actions reliably
 
 Lemmy uses a queue to send out activities. The size of this queue is specified by the config value `federation.worker_count`. Very large instances might need to increase this value. Search the logs for "Activity queue stats", if it is consistently larger than the worker_count (default: 64), the count needs to be increased.
+
+# tips from https://matrix.to/#/#lemmy-support-general:discuss.online
+
+**Connect to the database in the docker container:**
+
+> [requires PostgreSQL-client]
+
+– get container ip with:
+
+```sudo docker exec container-name ip address```
+
+– connect, requires password:
+
+```psql -h 192.168.176.3 -p 5432 -U lemmy lemmy```
+
+----
+**View logs:**
+
+```sudo docker-compose logs -f lemmy```
+
+----
+**doing DB dump:**
+
+> [not tried yet]
+
+docker-compose exec postgres pg_dumpall -c -U lemmy | gzip > lemmy_dump_date +%Y-%m-%d"_"%H_%M_%S.sql.gz
+
+----
+**Reset all logins:**
+
+> [back up your secret first, just in case]
+
+```SELECT * FROM secret;```
+
+– generate a new secret
+
+```UPDATE secret SET jwt_secret = gen_random_uuid();```
+
+----
+**Trim activity table:**
+
+```delete from public.activity where id < (select max(id) from public.activity) - 100000;```
+
+----
+**Disable 2FA for a user:**
+
+https://lemmyadmin.site/post/41 (https://aussie.zone/post/391892)
+
+----
+
+**Move pics to block storage:**
+> [not tried yet]
+
+https://git.asonix.dog/asonix/pict-rs/#user-content-filesystem-to-object-storage-migration
+
+https://lemmy.eus/comment/165512
+
+----
+
+**show non-local subscribers:**
+> [all bots for me]
+
+```select distinct P.name, I.domain from community_follower AS CF left join person AS P on CF.person_id = P.id left join instance AS I on P.instance_id = I.id where not P.local;```
